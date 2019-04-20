@@ -47,12 +47,14 @@ class excel2sql extends CModule
 
     function InstallFiles($arParams = array())
     {
+        CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/excel2sql/install/admin/", $_SERVER["DOCUMENT_ROOT"]."/bitrix/admin/", true, true);
         CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/excel2sql/install/themes/", $_SERVER["DOCUMENT_ROOT"]."/bitrix/themes/", true, true);
         return true;
     }
 
     function UnInstallFiles()
     {
+        DeleteDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/excel2sql/install/admin/", $_SERVER["DOCUMENT_ROOT"]."/bitrix/admin/");
         DeleteDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/excel2sql/install/themes/.default/", $_SERVER["DOCUMENT_ROOT"]."/bitrix/themes/.default");
         DeleteDirFilesEx("/bitrix/themes/.default/icons/excel2sql/");
         return true;
