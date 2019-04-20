@@ -73,7 +73,7 @@ class excel2sql extends CModule
 
     function DoUninstall()
     {
-        global $USER, $APPLICATION, $step;
+        global $USER, $APPLICATION;
         if ($USER->IsAdmin())
         {
             $this->UnInstallDB();
