@@ -25,11 +25,13 @@ class excel2sql extends CModule
 
     function InstallDB($arParams = array())
     {
+        RegisterModule("excel2sql");
         return true;
     }
 
     function UnInstallDB($arParams = array())
     {
+        UnRegisterModule("excel2sql");
         return true;
     }
 
@@ -59,7 +61,6 @@ class excel2sql extends CModule
     function DoInstall()
     {
         global $USER, $APPLICATION;
-
         if ($USER->IsAdmin())
         {
             if ($this->InstallDB())
@@ -67,7 +68,6 @@ class excel2sql extends CModule
                 $this->InstallEvents();
                 $this->InstallFiles();
             }
-            $GLOBALS["errors"] = $this->errors;
         }
     }
 
