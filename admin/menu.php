@@ -11,17 +11,11 @@ if (!\Bitrix\Main\Loader::includeModule('excel2sql'))
 
 return array(
     'parent_menu' => 'global_menu_content',
-    'section' => 'content',
+    'section' => 'excel2sql',
     'sort' => 1,
     'text' => Loc::getMessage('EXCEL2SQL_ADMIN_MENU_TITLE'),
-    'url' => $USER->isAdmin() ? 'highloadblock_index.php?lang='.LANGUAGE_ID : '',
-    'icon' => 'highloadblock_menu_icon',
-    'page_icon' => 'highloadblock_page_icon',
-    'more_url' => array(
-        'highloadblock_entity_edit.php',
-        'highloadblock_rows_list.php',
-        'highloadblock_row_edit.php'
-    ),
-    'items_id' => 'menu_highloadblock',
-    'items' => $items
+    'url' => $USER->isAdmin() ? 'excel2sql_index.php?lang='.LANGUAGE_ID : '',
+    'icon' => 'excel2sql_menu_icon',
+    'page_icon' => 'excel2sql_menu_icon',
+    'items_id' => 'menu_excel2sql',
 );
