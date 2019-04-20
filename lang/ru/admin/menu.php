@@ -1,0 +1,3 @@
+<?php
+
+$MESS['EXCEL2SQL_ADMIN_MENU_TITLE'] = 'Excel to SQL';
