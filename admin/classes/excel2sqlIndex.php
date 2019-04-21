@@ -12,7 +12,7 @@ use CAdminList;
 
 
 Loc::loadMessages(__FILE__);
-loc::loadMessages($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/excel2sql/lib/excel2sqlTable.php');
+loc::loadMessages($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/excel2sql/admin/menu.php');
 
 class Excel2SqIndex {
 
@@ -75,7 +75,7 @@ class Excel2SqIndex {
         $aContext = array(
             array(
                 "TEXT"	=> Loc::getMessage("ADD_EXCEL_DOCUMENTS"),
-                "LINK"	=> "site_edit.php?lang=".LANGUAGE_ID,
+                "LINK"	=> "excel2sqlAdd.php?lang=".LANGUAGE_ID,
                 "TITLE"	=> Loc::getMessage("ADD_EXCEL_DOCUMENTS"),
                 "ICON"	=> "btn_new"
             ),
