@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS `excel2sql_class_list`;

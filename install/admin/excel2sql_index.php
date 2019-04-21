@@ -1,1 +1,1 @@
-<?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/excel2sql/admin/excel2sql_index.php");?>
+<? require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/excel2sql/admin/excel2sqlIndex.php");?>

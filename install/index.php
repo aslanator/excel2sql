@@ -1,11 +1,14 @@
 <?php
 
 IncludeModuleLangFile(__FILE__);
+
 if (class_exists("excel2sql"))
     return;
 
 class excel2sql extends CModule
 {
+    public $errors;
+
     var $MODULE_ID = "excel2sql";
     var $MODULE_VERSION;
     var $MODULE_VERSION_DATE;
@@ -25,14 +28,30 @@ class excel2sql extends CModule
 
     function InstallDB($arParams = array())
     {
-        RegisterModule("excel2sql");
-        return true;
+        return ($this->executeDB('install.sql'));
     }
 
     function UnInstallDB($arParams = array())
     {
-        UnRegisterModule("excel2sql");
-        return true;
+        return ($this->executeDB('uninstall.sql'));
+    }
+
+    /**
+     * Execute sql file from /install/db/
+     * @param String $file
+     * @return bool
+     */
+    function executeDB(String $file)
+    {
+        global $DB, $APPLICATION;
+        $this->errors = false;
+        $this->errors = $DB->RunSQLBatch($_SERVER['DOCUMENT_ROOT'] . "/bitrix/modules/excel2sql/install/db/mysql/" . $file);
+        if (!$this->errors) {
+            return true;
+        } else {
+            $APPLICATION->ThrowException(implode("<br>", $this->errors));
+            return false;
+        }
     }
 
     function InstallEvents()
@@ -69,8 +88,11 @@ class excel2sql extends CModule
             {
                 $this->InstallEvents();
                 $this->InstallFiles();
+                RegisterModule("excel2sql");
             }
         }
+        $GLOBALS["errors"] = $this->errors;
+        $APPLICATION->IncludeAdminFile(GetMessage("EXCEL2SQL_MODULE_NAME"), $_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/excel2sql/install/step.php");
     }
 
     function DoUninstall()
@@ -81,6 +103,7 @@ class excel2sql extends CModule
             $this->UnInstallDB();
             $this->UnInstallEvents();
             $this->UnInstallFiles();
+            UnRegisterModule("excel2sql");
         }
     }
 }
