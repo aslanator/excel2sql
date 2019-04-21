@@ -6,12 +6,9 @@ namespace Excel2sql\Admin;
 use \Bitrix\Main\Localization\Loc;
 use CModule;
 use CUserOptions;
-use CUtil;
 use Excel2sql\Excel2sqlTable;
 use CAdminSorting;
 use CAdminList;
-use CAdminResult;
-use CLang;
 
 
 Loc::loadMessages(__FILE__);
