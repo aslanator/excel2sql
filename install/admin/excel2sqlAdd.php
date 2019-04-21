@@ -1,0 +1,1 @@
+<? require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/excel2sql/admin/excel2sqlAdd.php");?>
