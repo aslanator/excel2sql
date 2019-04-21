@@ -14,7 +14,7 @@ return array(
     'section' => 'excel2sql',
     'sort' => 1,
     'text' => Loc::getMessage('EXCEL2SQL_ADMIN_MENU_TITLE'),
-    'url' => $USER->isAdmin() ? 'excel2sql_index.php?lang='.LANGUAGE_ID : '',
+    'url' => $USER->isAdmin() ? 'excel2sqlIndex.php?lang='.LANGUAGE_ID : '',
     'icon' => 'excel2sql_menu_icon',
     'page_icon' => 'excel2sql_menu_icon',
     'items_id' => 'menu_excel2sql',
