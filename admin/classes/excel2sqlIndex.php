@@ -16,15 +16,6 @@ loc::loadMessages($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/excel2sql/admin/m
 
 include($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/excel2sql/lib/classes/tablexx.php');
 
-$result = \Excel2sql\CreatedTables\tablexxTable::getList(array(
-   'select' => '*'
-));
-
-while ($row = $result->fetch())
-{
-    print_R($row);
-}
-
 class Excel2SqIndex {
 
 
