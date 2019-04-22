@@ -1,5 +1,6 @@
 {
     "require": {
-        "mustache/mustache": "^2.12"
+        "mustache/mustache": "^2.12",
+        "phpoffice/phpspreadsheet": "^1.6"
     }
 }

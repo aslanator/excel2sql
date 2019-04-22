@@ -8,7 +8,9 @@ use CAdminContextMenu;
 use CAdminTabControl;
 use CModule;
 use Bitrix\Main\Application;
-use Excel2sql\excel2sqlCreateTable;
+use Excel2sql\Excel2sqlCreateTable;
+use Excel2sql\Excel2sqlTable;
+use Excel2sql\Excel2sqlMustache;
 
 
 Loc::loadMessages(__FILE__);
@@ -45,7 +47,6 @@ class Excel2SqAdd {
 
     /**
      * add documents or initialize view
-     * @throws \Bitrix\Main\SystemException
      */
     protected function doAction(){
         $request = Application::getInstance()->getContext()->getRequest();
@@ -62,14 +63,73 @@ class Excel2SqAdd {
         }
     }
 
+    /**
+     * @param string $name
+     * @return bool
+     */
+    protected function checkExists(string $name){
+        global $DB;
+        $name = Excel2sqlCreateTable::getTableNameFriendlyValue($name);
+        $exists = $DB->TableExists($name);
+        if($exists === false){
+            $exists = file_exists($_SERVER['DOCUMENT_ROOT'] . "/bitrix/modules/excel2sql/classes/$name.php");
+        }
+        return $exists;
+    }
+
+
     protected function addDocuments(Array $files){
+        $ormDataList = [];
         foreach($files['name'] as $key => $name){
-            if($filePath = $files['tmp_name'][$ket]){
-                $createTable = new excel2sqlCreateTable($name, $filePath);
+            if($filePath = $files['tmp_name'][$key]){
+                if(!$this->checkExists($name) || true){
+                    $table  = new Excel2sqlCreateTable($name, $filePath);
+                    $ormDataList[$table->getTableName()] = $table->getDataForOrm();
+                    $this->addRow($name);
+                }
+                else{
+                    $this->message[] = loc::getMessage('TABLE ALREADY EXISTS', ['{TABLE}' => $name]);
+                }
             }
+        }
+        if(count($ormDataList) > 0){
+            $this->createORM($ormDataList);
         }
     }
 
+    protected function createORM($ormDataList){
+        $ormDataList = $this->createReferenceORMData($ormDataList);
+        $mustache = new Excel2sqlMustache();
+        foreach($ormDataList as $ormData){
+            $render = $mustache->render("excel2sqlORM", $ormData);
+            file_put_contents($_SERVER['DOCUMENT_ROOT'] . "/bitrix/modules/excel2sql/lib/classes/{$ormData['table_name']}.php", $render);
+            echo '<pre>' . print_R($render, 1) . '</pre>';
+        }
+    }
+
+    protected function createReferenceORMData($ormDataList){
+        foreach($ormDataList as &$ormData){
+            $reference = preg_replace("#_ID$#", "", $ormData['reference_field']);
+            if($reference && isset($ormDataList[$reference]) && $ormDataList[$reference]['have_id'] === 'Y'){
+                $ormDataList[$reference]['one_to_many'] = $ormData['table_name'];
+            }
+            else{
+                $ormData['reference_field'] = false;
+            }
+        }
+        unset($ormData);
+        return $ormDataList;
+    }
+
+    protected function addRow($tableName){
+        $tableName = Excel2sqlCreateTable::getTableNameFriendlyValue($tableName);
+        $path =  "/bitrix/modules/excel2sql/lib/classes/$tableName.php";
+
+        $newTable = Excel2sqlTable::createObject();
+        $newTable->set('TABLE_NAME', $tableName);
+        $newTable->set('ORM_PATH', $path);
+        $newTable->save();
+    }
 
     /**
      * Initialize all data to display table
@@ -137,7 +197,8 @@ class Excel2SqAdd {
 
 
     public function display(){
-        $this->contextMenu->Show();
+        if($this->contextMenu instanceof  CAdminContextMenu)
+            $this->contextMenu->Show();
         echo $this->form;
     }
 

@@ -14,6 +14,17 @@ use CAdminList;
 Loc::loadMessages(__FILE__);
 loc::loadMessages($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/excel2sql/admin/menu.php');
 
+include($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/excel2sql/lib/classes/tablexx.php');
+
+$result = \Excel2sql\CreatedTables\tablexxTable::getList(array(
+   'select' => '*'
+));
+
+while ($row = $result->fetch())
+{
+    print_R($row);
+}
+
 class Excel2SqIndex {
 
 
@@ -164,7 +175,7 @@ class Excel2SqIndex {
         $row->AddViewField("ID", $arClass['ID']);
         $row->AddViewField("SORT", $arClass['SORT']);
         $row->AddViewField("TABLE_NAME", $arClass['TABLE_NAME']);
-        $row->AddViewField("ORM_PATH", $arClass['ORM_PATH']);
+        $row->AddViewField("ORM_PATH", "<a href='{$arClass['ORM_PATH']}'>{$arClass['ORM_PATH']}</a>");
     }
 
     public function display(){

@@ -1,0 +1,62 @@
+<?php
+namespace Excel2sql\CreatedTables;
+
+use Bitrix\Main,
+	Bitrix\Main\Localization\Loc;
+Loc::loadMessages(__FILE__);
+
+/**
+ * Class {{ table_name }}Table
+ *
+ * Fields:
+ * <ul>
+    {{#fields}}
+    * <li> {{ field }} string optional
+    {{/fields}}
+ * </ul>
+ **/
+
+    class {{ table_name }}Table extends Main\Entity\DataManager
+    {
+        /**
+        * Returns DB table name for entity.
+        *
+        * @return string
+        */
+        public static function getTableName()
+        {
+            return '{{ table_name }}';
+        }
+
+        /**
+        * Returns entity map definition.
+        *
+        * @return array
+        */
+        public static function getMap()
+        {
+            return array(
+                {{#fields}}
+
+                    "{{.}}" => array(
+                    'data_type' => 'text',
+                    'title' => "{{.}}",
+                    ),
+
+                {{/fields}}
+
+                {{#reference_field}}
+                    (new Reference(
+                        '{{ reference_field }}',
+                        {{ reference_table_name }}Table::class,
+                        Join::on('this.{{ reference_field }}', 'ref.ID')
+                    ))
+                ->configureJoinType('inner'),
+                {{/reference_field}}
+
+                {{#one_to_many}}
+                    (new OneToMany('ID', {{ one_to_many }}Table::class, '{{ one_to_many }}'))->configureJoinType('inner')
+                {{/one_to_many}}
+            );
+        }
+     }
