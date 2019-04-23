@@ -8,9 +8,9 @@ use CAdminContextMenu;
 use CAdminTabControl;
 use CModule;
 use Bitrix\Main\Application;
-use Excel2sql\Excel2sqlCreateTable;
 use Excel2sql\Excel2sqlTable;
 use Excel2sql\Excel2sqlMustache;
+use Excel2sql\Excel2sqlCreateTable;
 
 
 Loc::loadMessages(__FILE__);
@@ -25,7 +25,12 @@ class Excel2SqAdd {
     /**
      * @var string
      */
-    protected $form = "";
+    protected $content = "";
+
+    /**
+     * @var array
+     */
+    protected $errors = [];
 
 
     public function __construct()
@@ -56,7 +61,7 @@ class Excel2SqAdd {
             && check_bitrix_sessid()
             && strlen($files['name'][0]) > 0)
         {
-            $this->addDocuments($files);
+            $this->createTablesAndOrm($files);
         }
         else{
             $this->initView();
@@ -78,21 +83,32 @@ class Excel2SqAdd {
     }
 
 
-    protected function addDocuments(Array $files){
+    /**
+     * create tables and orm from documents
+     * @param array $files
+     */
+    protected function createTablesAndOrm(Array $files){
         $ormDataList = [];
         foreach($files['name'] as $key => $name){
             if($filePath = $files['tmp_name'][$key]){
                 if(!$this->checkExists($name) || true){
-                    $table  = new Excel2sqlCreateTable($name, $filePath);
+                    try{
+                        $table  = new Excel2sqlCreateTable($name, $filePath);
+                    }
+                    catch (\Exception $exception){
+                        $this->errors[] = $exception->getMessage();
+                    }
+                    if(count($this->errors) > 0 || !isset($table))
+                        break;
                     $ormDataList[$table->getTableName()] = $table->getDataForOrm();
                     $this->addRow($name);
                 }
                 else{
-                    $this->message[] = loc::getMessage('TABLE ALREADY EXISTS', ['{TABLE}' => $name]);
+                    $this->errors[] = loc::getMessage('TABLE ALREADY EXISTS', ['{TABLE}' => $name]);
                 }
             }
         }
-        if(count($ormDataList) > 0){
+        if(count($ormDataList) > 0 && count($this->errors) === 0){
             $this->createORM($ormDataList);
         }
     }
@@ -103,22 +119,7 @@ class Excel2SqAdd {
         foreach($ormDataList as $ormData){
             $render = $mustache->render("excel2sqlORM", $ormData);
             file_put_contents($_SERVER['DOCUMENT_ROOT'] . "/bitrix/modules/excel2sql/lib/classes/{$ormData['table_name']}.php", $render);
-            echo '<pre>' . print_R($render, 1) . '</pre>';
         }
-    }
-
-    protected function createReferenceORMData($ormDataList){
-        foreach($ormDataList as &$ormData){
-            $reference = preg_replace("#_ID$#", "", $ormData['reference_field']);
-            if($reference && isset($ormDataList[$reference]) && $ormDataList[$reference]['have_id'] === 'Y'){
-                $ormDataList[$reference]['one_to_many'] = $ormData['table_name'];
-            }
-            else{
-                $ormData['reference_field'] = false;
-            }
-        }
-        unset($ormData);
-        return $ormDataList;
     }
 
     protected function addRow($tableName){
@@ -129,6 +130,7 @@ class Excel2SqAdd {
         $newTable->set('TABLE_NAME', $tableName);
         $newTable->set('ORM_PATH', $path);
         $newTable->save();
+        $this->content = Loc::GetMessage("SUCCESS");
     }
 
     /**
@@ -158,7 +160,24 @@ class Excel2SqAdd {
         );
 
         $this->contextMenu = new CAdminContextMenu($aMenu);
+    }
 
+    /**
+     * add reference fields to ORM data
+     * @param $ormDataList
+     * @return mixed
+     */
+    protected function createReferenceORMData($ormDataList){
+        foreach($ormDataList as $ormData){
+            foreach($ormData['reference'] as $reference){
+                $referenceName = $reference['many'];
+                if($referenceName && isset($ormDataList[$referenceName]) && $ormDataList[$referenceName]['have_id'] === 'Y'){
+                    $ormDataList[$referenceName]['one_to_many'][] = ['one' => $ormData['table_name'], 'many' => $ormDataList[$referenceName]['table_name']];
+                }
+            }
+
+        }
+        return $ormDataList;
     }
 
     /**
@@ -192,14 +211,19 @@ class Excel2SqAdd {
         </form>
         <?
 
-        $this->form = ob_get_clean();
+        $this->content = ob_get_clean();
     }
 
 
     public function display(){
-        if($this->contextMenu instanceof  CAdminContextMenu)
-            $this->contextMenu->Show();
-        echo $this->form;
+        if(count($this->errors) > 0){
+            echo join('<br>', $this->errors);
+        }
+        else{
+            if($this->contextMenu instanceof  CAdminContextMenu)
+                $this->contextMenu->Show();
+            echo $this->content;
+        }
     }
 
 }

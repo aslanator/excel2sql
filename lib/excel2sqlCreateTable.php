@@ -2,8 +2,12 @@
 
 namespace Excel2sql;
 
+
 use PhpOffice\PhpSpreadsheet\Worksheet\Row;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Bitrix\Main\Application;
+use Bitrix\Main\ORM\Fields\TextField;
+use Bitrix\Main\ORM\Fields\IntegerField;
 
 class Excel2sqlCreateTable {
 
@@ -18,11 +22,15 @@ class Excel2sqlCreateTable {
      */
     protected $arFields = null;
 
+    /**
+     * @var array|null
+     */
+    protected $arPrimary = null;
 
     /**
      * @var array|null
      */
-    protected $arCollNames = null;
+    protected $arRows = null;
 
 
     /**
@@ -58,6 +66,7 @@ class Excel2sqlCreateTable {
     }
 
     /**
+     * add excel row. If it first row, then it pushes to table fields
      * @param Row $row
      */
     protected function addRow(Row $row) {
@@ -66,12 +75,44 @@ class Excel2sqlCreateTable {
         foreach($cells as $cellIndex => $cell){
             if($rowIndex === 1){
                 $columnName = $cell->getFormattedValue();
-                $this->arCollNames[$cellIndex] = $this->getTableNameFriendlyValue($columnName);
+                $columnName = $this->getTableNameFriendlyValue($columnName);
+                $this->addField($cellIndex, $columnName);
             }
             else{
-                $this->arFields[$rowIndex][] = $cell->getFormattedValue();
+                $field = $this->arFields[$cellIndex];
+                $this->arRows[$rowIndex][$field->getColumnName()] = $cell->getFormattedValue();
             }
         }
+    }
+
+
+    /**
+     * create Bitrix ORM fields
+     * @param string $key
+     * @param string $columnName
+     * @throws \Bitrix\Main\SystemException
+     */
+    protected function addField(string $key, string $columnName){
+        if($columnName === "ID"){
+            $this->arFields[$key] = new IntegerField($columnName, ['primary' => true]);
+            $this->arPrimary = [$key];
+        }
+        elseif(preg_match("/_ID$/", $columnName)){
+            $this->arFields[$key] = new IntegerField($columnName);
+        }
+        else{
+            $this->arFields[$key] = new TextField($columnName, ['default_value' => '123']);
+        }
+    }
+
+    /**
+     * @param $value
+     * @return string
+     */
+    public static function prepareForSql($value){
+        $connection = Application::getConnection();
+        $sqlHelper =  $connection->getSqlHelper();
+        return $sqlHelper->forSql($value);
     }
 
     /**
@@ -79,7 +120,6 @@ class Excel2sqlCreateTable {
      * @return string
      */
     public static function getTableNameFriendlyValue($name):string{
-        global $DB;
         if(!mb_check_encoding($name, 'ASCII')){
             $name = \Cutil::translit($name,"ru");
         }
@@ -89,90 +129,64 @@ class Excel2sqlCreateTable {
         $name = preg_replace('#\..*#', '', $name);
         $name = preg_replace("/[^A-Za-z0-9%_]+/i", "", $name);
         $name = Trim($name);
-        $name = $DB->ForSql($name);
+        $name = static::prepareForSql($name);
+        if($name === 'table')
+            $name = 'table_name'; //ORM не поддерживает имя tableTable
         return substr($name, 0, 64);
     }
 
     /**
-     * Make wrapped string from array
-     * @param array $array
-     * @param string $wrapLeft
-     * @param string $wrapRight
-     * @return string
+     * @throws \Bitrix\Main\ArgumentException
+     * @throws \Bitrix\Main\Db\SqlQueryException
      */
-    protected function wrap(array $array, string $wrapLeft, string $wrapRight):string {
-        global $DB;
-        return array_reduce($array, function($carry, $item) use ($DB, $wrapLeft, $wrapRight){
-            $carry = $carry ? $carry . ', ' : "";
-            return $carry . $wrapLeft . $DB->ForSql($item) . $wrapRight;
-        }, false);
-
+    protected function createTable(){
+        $connection = Application::getConnection();
+        $connection->startTransaction();
+        $connection->createTable(
+            $this->tableName,
+            $this->arFields,
+            $this->arPrimary
+        );
+        foreach($this->arRows as $row){
+            $connection->add($this->tableName, $row);
+        }
+        $connection->commitTransaction();
     }
 
     /**
-     * Get array of sql commands, which needed to create table with data
+     * Generate data used in mustache template to generate ORM for this table
      * @return array
      */
-    public function getArSql(): array{
-        global $DB;
-        $tableName = $this->tableName;
-        $arSql = [];
-        $insertCollNames = $this->wrap($this->arCollNames, "`", "`");
-        $createCollNames = $this->wrap($this->arCollNames, '`', '` TEXT NULL');
-
-
-        $arSql[] = "CREATE TABLE IF NOT EXISTS `$tableName` ( $createCollNames ) ENGINE = InnoDB;";
-        foreach($this->arFields as $arValues){
-            $values = $this->wrap($arValues, "'", "'");
-            $arSql[] = " INSERT INTO `$tableName` ($insertCollNames) VALUES ($values)";
-        }
-        return $arSql;
-    }
-
-
-    protected function createTable(){
-        global $DB;
-        $arSql = $this->getArSql();
-        $DB->StartTransaction();
-        foreach($arSql as $sql){
-            $this->query($sql);
-        }
-        $DB->Commit();
-    }
-
-    /**
-     * @param string
-     */
-    protected function query(string $value){
-        global $DB, $APPLICATION;
-        try{
-            $DB->Query($value);
-        }
-        catch (\Exception $exception){
-            $APPLICATION->ThrowException(implode("<br>", [$DB->GetErrorMessage()]));
-        }
-    }
-
     public function getDataForOrm(){
         $haveID = 'N';
         $collNames = [];
-        foreach($this->arCollNames as $name){
-            $collNames[] = $name;
+        $ormData = ['reference' => []];
+        foreach($this->arFields as $field){
+            $name = $field->getColumnName();
+            $type = $field instanceof TextField ? 'text' : 'integer';
+            $primary = $field->isPrimary();
+            $collNames[] = ['name' => $name, 'primary' => $primary, 'type' => $type];
             if($name === 'ID'){
                 $haveID = 'Y';
             }
             if(preg_match('#(.*)_ID$#', $name, $match)){
                 $reference = $match[1];
+                $ormData['reference'][] = [
+                    'many' => $reference,
+                    'one' => $this->tableName,
+                    'reference_field' => $reference . '_ID'
+                ];
             }
         }
-        $ormData = ['table_name' => $this->tableName, 'fields' => $collNames, 'have_id' => $haveID];
-        if(isset($reference)){
-            $ormData['reference_table_name'] = $reference;
-            $ormData['reference_field'] = $reference . "_ID";
-        }
+        $ormData['table_name'] = $this->tableName;
+        $ormData['fields'] = $collNames;
+        $ormData['have_id'] = $haveID;
         return $ormData;
     }
 
+    /**
+     * @return string
+     */
     public function getTableName(){
         return $this->tableName;
     }

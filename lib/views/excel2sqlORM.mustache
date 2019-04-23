@@ -1,8 +1,13 @@
 <?php
 namespace Excel2sql\CreatedTables;
 
-use Bitrix\Main,
-	Bitrix\Main\Localization\Loc;
+use Bitrix\Main;
+use	Bitrix\Main\Localization\Loc;
+use Bitrix\Main\ORM\Fields\IntegerField;
+use Bitrix\Main\ORM\Fields\Relations\Reference;
+use Bitrix\Main\ORM\Query\Join;
+use Bitrix\Main\ORM\Fields\Relations\OneToMany;
+
 Loc::loadMessages(__FILE__);
 
 /**
@@ -11,7 +16,7 @@ Loc::loadMessages(__FILE__);
  * Fields:
  * <ul>
     {{#fields}}
-    * <li> {{ field }} string optional
+    * <li> {{ name }} string optional
     {{/fields}}
  * </ul>
  **/
@@ -38,24 +43,27 @@ Loc::loadMessages(__FILE__);
             return array(
                 {{#fields}}
 
-                    "{{.}}" => array(
-                    'data_type' => 'text',
-                    'title' => "{{.}}",
+                    '{{name}}' => array(
+                        {{#primary}}
+                        'primary' => true,
+                        {{/primary}}
+                        'data_type' => '{{type}}',
+                        'title' => "{{name}}",
                     ),
 
                 {{/fields}}
 
-                {{#reference_field}}
+                {{#reference}}
                     (new Reference(
-                        '{{ reference_field }}',
-                        {{ reference_table_name }}Table::class,
+                        '{{one}}_{{many}}',
+                        {{many}}Table::class,
                         Join::on('this.{{ reference_field }}', 'ref.ID')
                     ))
                 ->configureJoinType('inner'),
-                {{/reference_field}}
+                {{/reference}}
 
                 {{#one_to_many}}
-                    (new OneToMany('ID', {{ one_to_many }}Table::class, '{{ one_to_many }}'))->configureJoinType('inner')
+                    (new OneToMany('{{many}}_{{one}}', {{one}}Table::class, '{{one}}_{{many}}'))
                 {{/one_to_many}}
             );
         }

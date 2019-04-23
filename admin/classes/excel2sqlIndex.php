@@ -14,7 +14,6 @@ use CAdminList;
 Loc::loadMessages(__FILE__);
 loc::loadMessages($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/excel2sql/admin/menu.php');
 
-include($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/excel2sql/lib/classes/tablexx.php');
 
 class Excel2SqIndex {
 
